@@ -1,0 +1,55 @@
+CREATE OR ALTER PROCEDURE spDropUserAllDatabases
+@UserName varchar(256)
+AS 
+BEGIN
+DECLARE 
+    @DbName VARCHAR(256) ,
+    @SQL NVARCHAR(1024),
+	@SQL2 NVARCHAR(1024);
+	
+DECLARE CurGetDbName CURSOR
+FOR SELECT NAME FROM SYS.DATABASES WHERE database_id > 4
+
+OPEN CurGetDbName;
+
+FETCH NEXT FROM CurGetDbName INTO @DbName 
+   
+   PRINT 'Searching User in dbs ...'
+WHILE @@FETCH_STATUS = 0
+    BEGIN
+		
+		BEGIN TRY
+		
+		
+		SET @SQL2 = '  SELECT 1 FROM  '+@DbName+'.SYS.database_principals WHERE NAME = '''+@UserName+'''  ';
+		DROP TABLE IF EXISTS #users 
+		create table #users(S INT)
+		INSERT INTO #users
+		EXEC (@SQL2)
+		IF EXISTS (SELECT 1 FROM #users)  
+ 		BEGIN
+			DROP TABLE #users
+			PRINT 'USER FOUND IN '+@DbName+'  DATABASE,'
+				PRINT '            DROP USER STARTS  IN '+@DbName+' ...'
+				 SET @SQL = '     USE  '+ QUOTENAME(@DbName)+';    DROP USER    '+QUOTENAME(@UserName)+'   ' 
+				 EXEC (@SQL)
+				PRINT  '                USER DELETED FROM  '+@DbName+' '
+
+		END
+
+       
+		END TRY		
+		BEGIN CATCH
+
+		END CATCH
+
+        FETCH NEXT FROM CurGetDbName INTO @DbName
+    END;
+
+CLOSE CurGetDbName;
+
+DEALLOCATE CurGetDbName;
+
+DROP TABLE #users 
+
+END
